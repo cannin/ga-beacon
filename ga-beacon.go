@@ -1,14 +1,19 @@
-package beacon
+package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	l "github.com/op/go-logging"
@@ -24,10 +29,57 @@ var (
 	badgeFlatGif = mustReadFile("static/badge-flat.gif")
 	pageTemplate = template.Must(template.New("page").ParseFiles("page.html"))
 	logger       = l.Logger{}
+
+	listenAddr string
+	listenPort int
 )
 
 func init() {
-	http.HandleFunc("/", handler)
+	flag.StringVar(&listenAddr, "listenAddr", "", "IP address to listen on")
+	flag.IntVar(&listenPort, "listenPort", 8080, "Port to listen on")
+}
+
+func main() {
+	flag.Parse()
+
+	if listenAddr == "" {
+		listenAddr = "0.0.0.0"
+	}
+
+	addr := fmt.Sprintf("%s:%d", listenAddr, listenPort)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      http.HandlerFunc(handler),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  15 * time.Second,
+	}
+
+	done := make(chan bool)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		logger.Infof("Server is shutting down...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		server.SetKeepAlivesEnabled(false)
+		if err := server.Shutdown(ctx); err != nil {
+			logger.Fatalf("Could not gracefully shutdown the server: %v", err)
+		}
+		close(done)
+	}()
+
+	logger.Infof("Server listening on %s", addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Fatalf("Could not listen on %s: %v", addr, err)
+	}
+
+	<-done
+	logger.Infof("Server stopped")
 }
 
 func mustReadFile(path string) []byte {
