@@ -11,4 +11,9 @@ COPY static/ static/
 RUN go get -d -v \
     && go install -v
 
+# Multi-stage build to reduce image size
+FROM alpine:latest
+
+COPY --from=0 /go/bin/ga-beacon /usr/local/bin/ga-beacon
+
 ENTRYPOINT [ "ga-beacon" ]
