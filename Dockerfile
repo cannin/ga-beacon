@@ -9,11 +9,15 @@ COPY static/ static/
 
 # Install dependencies
 RUN go get -d -v \
-    && go install -v
+    && CGO_ENABLED=0 GOOS=linux go install -v
 
 # Multi-stage build to reduce image size
 FROM alpine:latest
 
-COPY --from=0 /go/bin/ga-beacon /usr/local/bin/ga-beacon
+WORKDIR /ga-beacon
 
-ENTRYPOINT [ "ga-beacon" ]
+COPY --from=0 /go/bin .
+COPY --from=0 /go/src/ga-beacon/page.html page.html
+COPY --from=0 /go/src/ga-beacon/static static
+
+ENTRYPOINT [ "./ga-beacon" ]
