@@ -1,4 +1,4 @@
-# Google Analytics Beacon [![Analytics](https://ga-beacon.appspot.com/UA-71196-10/ga-beacon/readme?pixel)](https://github.com/igrigorik/ga-beacon)
+# Google Analytics Beacon [![Analytics](https://ga-beacon.irvinlim.com/UA-61872435-6/ga-beacon/readme?pixel)](https://github.com/igrigorik/ga-beacon)
 
 _This is a fork of <https://github.com/igrigorik/ga-beacon>, without the explicit dependency on Google App Engine and with Docker support._
 
